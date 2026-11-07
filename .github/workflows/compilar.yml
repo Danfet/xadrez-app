@@ -1,0 +1,41 @@
+name: Compilar APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Puxar os arquivos do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar dependências do sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          pip3 install --user --upgrade "Cython==0.29.33" virtualenv setuptools wheel
+          pip3 install --user buildozer
+
+      - name: Configurar o Buildozer Automaticamente
+        run: |
+          export PATH=$PATH:~/.local/bin
+          yes | buildozer init
+          sed -i 's/requirements = python3,kivy/requirements = python3,kivy,chess,requests,charset-normalizer/' buildozer.spec
+          sed -i 's/#android.permissions = INTERNET/android.permissions = INTERNET/' buildozer.spec
+          sed -i 's/title = My Application/title = Xadrez/' buildozer.spec
+          sed -i 's/package.name = myapp/package.name = xadrez/' buildozer.spec
+          sed -i 's/#android.archs = arm64-v8a, armeabi-v7a/android.archs = arm64-v8a/' buildozer.spec
+          sed -i 's/#icon.filename = %(source.dir)s\/data\/icon.png/icon.filename = %(source.dir)s\/icone.png/' buildozer.spec
+
+      - name: Compilar o APK
+        run: |
+          export PATH=$PATH:~/.local/bin
+          yes | buildozer -v android debug
+
+      - name: Disponibilizar o APK para Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Xadrez-APK
+          path: bin/*.apk
